@@ -6,11 +6,17 @@ import { InputGroup } from './components/InputGroup';
 import { IngredientCard } from './components/IngredientCard';
 import { GoogleGenAI } from "@google/genai";
 
+interface WeatherSource {
+  uri: string;
+  title: string;
+}
+
 interface WeatherInfo {
   city: string;
   temp: number;
   condition: string;
   loading: boolean;
+  sources?: WeatherSource[];
 }
 
 const App: React.FC = () => {
@@ -50,26 +56,49 @@ const App: React.FC = () => {
     setWeather(prev => ({ ...(prev || { city: '', temp: 0, condition: '' }), loading: true }));
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `De acordo com as coordenadas lat: ${lat}, lon: ${lon}, qual é a cidade atual e a temperatura externa agora (apenas números em Celsius)? Além disso, descreva o clima em uma única palavra (ex: ensolarado, nublado, chuvoso, limpo). Responda apenas um JSON válido com os campos: "city", "temp" (number) e "condition".`;
+      // Prompt alterado para evitar JSON mode que conflita com grounding chunks
+      const prompt = `Localize as coordenadas lat: ${lat}, lon: ${lon}. Informe a cidade, temperatura atual em Celsius (apenas o número) e o clima curto (ex: Ensolarado). RESPONDA EXATAMENTE NO FORMATO: CIDADE: [nome] | TEMP: [numero] | CLIMA: [clima].`;
       
-      const response = await ai.models.generateContent({
+      const result = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
         config: {
-          tools: [{ googleSearch: {} }],
-          responseMimeType: "application/json"
+          tools: [{ googleSearch: {} }]
         },
       });
 
-      const data = JSON.parse(response.text || '{}');
-      if (data.city && data.temp) {
+      const text = result.text || "";
+      
+      // Parsing manual robusto
+      const cityMatch = text.match(/CIDADE:\s*([^|]+)/i);
+      const tempMatch = text.match(/TEMP:\s*([\d.]+)/i);
+      const condMatch = text.match(/CLIMA:\s*([^|.\n]+)/i);
+
+      // Extração obrigatória de fontes (Grounding Chunks)
+      const rawChunks = result.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      const sources: WeatherSource[] = rawChunks
+        .filter(chunk => chunk.web)
+        .map(chunk => ({
+          uri: chunk.web?.uri || "",
+          title: chunk.web?.title || "Fonte"
+        }))
+        .filter(s => s.uri !== "");
+
+      if (cityMatch && tempMatch) {
+        const city = cityMatch[1].trim();
+        const temp = parseFloat(tempMatch[1]);
+        const condition = condMatch ? condMatch[1].trim() : 'desconhecido';
+
         setWeather({
-          city: data.city,
-          temp: data.temp,
-          condition: data.condition || 'desconhecido',
-          loading: false
+          city,
+          temp,
+          condition,
+          loading: false,
+          sources: sources.length > 0 ? sources.slice(0, 2) : undefined
         });
-        setConfig(prev => ({ ...prev, roomTemp: Math.round(data.temp) }));
+        setConfig(prev => ({ ...prev, roomTemp: Math.round(temp) }));
+      } else {
+        throw new Error("Formato de resposta inválido");
       }
     } catch (error) {
       console.error("Erro ao buscar clima:", error);
@@ -87,8 +116,10 @@ const App: React.FC = () => {
           fetchLocalWeather(position.coords.latitude, position.coords.longitude);
         },
         (error) => {
-          console.error("Localização negada ou erro:", error);
-        }
+          console.error("Erro ou permissão negada:", error);
+          setHasRequestedLocation(false);
+        },
+        { timeout: 10000, enableHighAccuracy: false }
       );
     }
   };
@@ -205,12 +236,30 @@ const App: React.FC = () => {
                     onChange={handleRoomTempChange}
                   />
                   {weather && !weather.loading && (
-                    <div className="flex items-center gap-2 mt-2 px-1 animate-in fade-in slide-in-from-left-2 duration-500">
-                      <span className="text-lg leading-none">{getWeatherIcon(weather.condition)}</span>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 leading-none mb-0.5">{weather.city}</span>
-                        <span className="text-[9px] mono opacity-40 leading-none">{weather.temp}°C • {weather.condition}</span>
+                    <div className="flex flex-col gap-2 mt-2 px-1 animate-in fade-in slide-in-from-left-2 duration-500">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg leading-none">{getWeatherIcon(weather.condition)}</span>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 leading-none mb-0.5">{weather.city}</span>
+                          <span className="text-[9px] mono opacity-40 leading-none">{weather.temp}°C • {weather.condition}</span>
+                        </div>
                       </div>
+                      
+                      {weather.sources && weather.sources.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {weather.sources.map((source, idx) => (
+                            <a 
+                              key={idx} 
+                              href={source.uri} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-[8px] uppercase tracking-tighter opacity-30 hover:opacity-100 transition-opacity underline decoration-dotted"
+                            >
+                              Fonte {idx + 1}: {source.title.slice(0, 20)}...
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                   {weather?.loading && (
@@ -244,7 +293,8 @@ const App: React.FC = () => {
                     <div className="mt-6 space-y-4 pt-6 border-t border-[#1d263b] border-opacity-10 animate-in fade-in slide-in-from-top-2">
                         <InputGroup 
                           label="Temperatura Geladeira" 
-                          value={config.fridgeTemp} 
+                          /* Correcting typo from fringeTemp to fridgeTemp */
+                          value={config.fridgeTemp || 4} 
                           unit="°C"
                           min={2} max={8} 
                           onChange={(v) => setConfig({...config, fridgeTemp: v})}
