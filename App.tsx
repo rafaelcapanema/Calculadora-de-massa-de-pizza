@@ -111,7 +111,7 @@ const App: React.FC = () => {
       
       <header className="mb-20 text-center flex flex-col items-center">
         <div className="flex items-end gap-1 mb-2">
-            <h1 className="text-5xl font-serif font-black tracking-tight leading-none">Capa Pizza</h1>
+            <h1 className="text-5xl font-serif font-black tracking-tight leading-none text-[#1d263b]">Capa Pizza</h1>
             <div className="dot mb-1"></div>
         </div>
         <p className="text-[10px] font-bold tracking-[0.4em] uppercase opacity-40">Calculadora de Massa</p>
@@ -154,7 +154,7 @@ const App: React.FC = () => {
               label="Hidratação" 
               value={config.hydration} 
               unit="%"
-              min={50} max={80} step={0.5}
+              min={50} max={100} step={1}
               onChange={(v) => setConfig({...config, hydration: v})}
             />
             <InputGroup 
@@ -167,19 +167,19 @@ const App: React.FC = () => {
         </div>
 
         <div className="py-4">
-          <div className="border border-navy p-6 rounded-sm">
+          <div className="bg-white/40 border border-[#1d263b] p-6 rounded-sm shadow-sm">
             <button 
               onClick={toggleOil}
               className="flex items-center justify-between w-full group"
             >
-                <span className="text-xs font-bold uppercase tracking-widest">Incluir Azeite</span>
-                <div className={`w-10 h-5 rounded-full border border-navy flex items-center px-1 transition-colors ${config.useOil ? 'bg-[#1d263b]' : ''}`}>
-                    <div className={`w-2.5 h-2.5 rounded-full transition-transform ${config.useOil ? 'translate-x-5 bg-[#edece3]' : 'bg-[#1d263b]'}`}></div>
+                <span className="text-xs font-bold uppercase tracking-widest text-[#1d263b]">Incluir Azeite</span>
+                <div className={`w-11 h-6 rounded-full border border-[#1d263b] flex items-center px-1 transition-all duration-300 ${config.useOil ? 'bg-[#1d263b]' : 'bg-white/50'}`}>
+                    <div className={`w-3.5 h-3.5 rounded-full transition-transform duration-300 ${config.useOil ? 'translate-x-5 bg-[#edece3]' : 'bg-[#1d263b]'}`}></div>
                 </div>
             </button>
 
             {config.useOil && (
-                <div className="mt-6 pt-4 border-t border-navy border-opacity-10 animate-in fade-in slide-in-from-top-2">
+                <div className="mt-6 pt-6 border-t border-[#1d263b] border-opacity-10 animate-in fade-in slide-in-from-top-2">
                     <InputGroup 
                       label="Porcentagem de Azeite" 
                       value={config.oil} 
@@ -193,7 +193,7 @@ const App: React.FC = () => {
         </div>
 
         <div className="py-6 mt-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-40 mb-4 text-center">Fermentação</h3>
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-40 mb-8 text-center">Fermentação</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                 <div className="flex flex-col">
@@ -215,7 +215,7 @@ const App: React.FC = () => {
                   )}
                   {weather?.loading && (
                     <div className="flex items-center gap-2 mt-2 px-1 opacity-40 animate-pulse">
-                      <div className="w-4 h-4 rounded-full bg-navy border-2 border-t-transparent animate-spin"></div>
+                      <div className="w-4 h-4 rounded-full border-2 border-[#1d263b] border-t-transparent animate-spin"></div>
                       <span className="text-[9px] uppercase tracking-widest font-bold">Buscando clima...</span>
                     </div>
                   )}
@@ -229,19 +229,19 @@ const App: React.FC = () => {
                 />
             </div>
 
-            <div className="mt-8 border border-navy p-6 rounded-sm">
+            <div className="mt-8 bg-white/40 border border-[#1d263b] p-6 rounded-sm shadow-sm">
                 <button 
                   onClick={toggleFridge}
                   className="flex items-center justify-between w-full group"
                 >
-                    <span className="text-xs font-bold uppercase tracking-widest">Maturação a Frio</span>
-                    <div className={`w-10 h-5 rounded-full border border-navy flex items-center px-1 transition-colors ${config.useFridge ? 'bg-[#1d263b]' : ''}`}>
-                        <div className={`w-2.5 h-2.5 rounded-full transition-transform ${config.useFridge ? 'translate-x-5 bg-[#edece3]' : 'bg-[#1d263b]'}`}></div>
+                    <span className="text-xs font-bold uppercase tracking-widest text-[#1d263b]">Maturação a Frio</span>
+                    <div className={`w-11 h-6 rounded-full border border-[#1d263b] flex items-center px-1 transition-all duration-300 ${config.useFridge ? 'bg-[#1d263b]' : 'bg-white/50'}`}>
+                        <div className={`w-3.5 h-3.5 rounded-full transition-transform duration-300 ${config.useFridge ? 'translate-x-5 bg-[#edece3]' : 'bg-[#1d263b]'}`}></div>
                     </div>
                 </button>
 
                 {config.useFridge && (
-                    <div className="mt-6 space-y-4 pt-4 border-t border-navy border-opacity-10 animate-in fade-in slide-in-from-top-2">
+                    <div className="mt-6 space-y-4 pt-6 border-t border-[#1d263b] border-opacity-10 animate-in fade-in slide-in-from-top-2">
                         <InputGroup 
                           label="Temperatura Geladeira" 
                           value={config.fridgeTemp} 
@@ -262,33 +262,36 @@ const App: React.FC = () => {
         </div>
 
         <div className="pt-8 space-y-6">
-           <div className="flex border border-navy rounded-sm overflow-hidden">
-              {(['fresh', 'dry'] as const).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setConfig({...config, yeastType: type})}
-                  className={`flex-1 py-4 text-[9px] font-bold uppercase tracking-widest transition-all ${config.yeastType === type ? 'bg-[#1d263b] text-[#edece3]' : 'opacity-40 hover:opacity-100'}`}
-                >
-                  {type === 'fresh' ? 'Fresco' : 'Seco'}
-                </button>
-              ))}
+           <div className="flex flex-col gap-3">
+              <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Tipo de Fermento</span>
+              <div className="flex border border-[#1d263b] rounded-sm overflow-hidden bg-white/30">
+                {(['fresh', 'dry'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setConfig({...config, yeastType: type})}
+                    className={`flex-1 py-4 text-[9px] font-bold uppercase tracking-widest transition-all ${config.yeastType === type ? 'bg-[#1d263b] text-[#edece3]' : 'text-[#1d263b] opacity-40 hover:opacity-100'}`}
+                  >
+                    {type === 'fresh' ? 'Fresco' : 'Seco'}
+                  </button>
+                ))}
+              </div>
            </div>
            
-           <div className="flex justify-between items-center py-4 border-t border-navy border-opacity-10">
+           <div className="flex justify-between items-center py-4 border-t border-[#1d263b] border-opacity-10">
              <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Taxa de Fermento (Auto)</span>
-             <span className="text-xs mono font-bold">{calculatedYeastPercentage.toFixed(4)}%</span>
+             <span className="text-xs mono font-bold text-[#1d263b]">{calculatedYeastPercentage.toFixed(4)}%</span>
            </div>
         </div>
       </section>
 
-      <footer className="mt-24 pt-12 border-t border-navy border-opacity-10 text-center">
+      <footer className="mt-24 pt-12 border-t border-[#1d263b] border-opacity-10 text-center">
         <button 
           onClick={() => {
             setConfig(AVPN_DEFAULTS);
             setWeather(null);
             setHasRequestedLocation(false);
           }}
-          className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 hover:opacity-100 transition-opacity mb-8"
+          className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 hover:opacity-100 transition-opacity mb-8 text-[#1d263b]"
         >
           Resetar para Padrão AVPN
         </button>
