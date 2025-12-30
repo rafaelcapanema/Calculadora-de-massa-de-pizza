@@ -53,9 +53,9 @@ const App: React.FC = () => {
     };
   }, [config, calculatedYeastPercentage]);
 
-  const fetchLocalWeather = async (lat: number, lon: number) => {
+  const fetchLocalWeather = async (locationName: string) => {
     setIsDetecting(true);
-    setWeather({ city: '', temp: 0, condition: '', loading: true });
+    setWeather({ city: locationName, temp: 0, condition: '', loading: true });
     
     try {
       if (!process.env.API_KEY) {
@@ -63,7 +63,7 @@ const App: React.FC = () => {
       }
 
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Consulte o clima atual para as coordenadas lat: ${lat}, lon: ${lon} usando o Google Search. Informe o nome da cidade, a temperatura atual em Celsius e uma descrição curta do clima (ex: Nublado). Responda exatamente neste formato: CIDADE: [nome] | TEMP: [número] | CLIMA: [descrição].`;
+      const prompt = `Consulte o clima atual para a cidade de "${locationName}" usando o Google Search. Informe a temperatura atual em Celsius e uma descrição curta do clima (ex: Ensolarado). Responda exatamente neste formato: CIDADE: [nome completo da cidade] | TEMP: [número] | CLIMA: [descrição].`;
       
       const result = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -101,39 +101,39 @@ const App: React.FC = () => {
         });
         setConfig(prev => ({ ...prev, roomTemp: Math.round(temp) }));
       } else {
-        throw new Error("Não foi possível processar a resposta do clima.");
+        throw new Error("Não foi possível extrair os dados do clima.");
       }
     } catch (error: any) {
       console.error("Erro na detecção de clima:", error);
       setWeather({ 
         city: '', temp: 0, condition: '', loading: false, 
-        error: "Falha ao obter clima. Tente novamente." 
+        error: "Falha ao obter clima para " + locationName
       });
     } finally {
       setIsDetecting(false);
     }
   };
 
-  const requestLocation = () => {
-    if (!navigator.geolocation) {
-      setWeather({ city: '', temp: 0, condition: '', loading: false, error: "Geolocalização não suportada." });
-      return;
-    }
-
+  const detectLocationAndWeather = async () => {
     setIsDetecting(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        fetchLocalWeather(position.coords.latitude, position.coords.longitude);
-      },
-      (error) => {
-        console.error("Erro de geolocalização:", error);
-        let msg = "Permissão negada ou erro de GPS.";
-        if (error.code === error.TIMEOUT) msg = "Tempo esgotado ao buscar localização.";
-        setWeather({ city: '', temp: 0, condition: '', loading: false, error: msg });
-        setIsDetecting(false);
-      },
-      { timeout: 15000, enableHighAccuracy: false }
-    );
+    setWeather(null);
+
+    try {
+      const ipResponse = await fetch('https://ipapi.co/json/');
+      if (!ipResponse.ok) throw new Error("Falha na detecção por IP");
+      
+      const ipData = await ipResponse.json();
+      const locationString = `${ipData.city}, ${ipData.region}, ${ipData.country_name}`;
+      
+      await fetchLocalWeather(locationString);
+    } catch (error) {
+      console.error("Erro ao detectar localização por IP:", error);
+      setWeather({ 
+        city: '', temp: 0, condition: '', loading: false, 
+        error: "Não foi possível detectar sua localização automaticamente." 
+      });
+      setIsDetecting(false);
+    }
   };
 
   const getWeatherIcon = (condition: string) => {
@@ -161,13 +161,13 @@ const App: React.FC = () => {
       </header>
 
       <section className="grid grid-cols-2 gap-4 mb-16">
-        <IngredientCard name="Farinha" amount={ingredients.flour} unit="g" />
-        <IngredientCard name="Água" amount={ingredients.water} unit="g" />
-        <IngredientCard name="Sal" amount={ingredients.salt} unit="g" />
-        <IngredientCard name="Fermento" amount={ingredients.yeast} unit="g" />
+        <IngredientCard name="Farinha" amount={ingredients.flour} unit="g" decimals={0} />
+        <IngredientCard name="Água" amount={ingredients.water} unit="g" decimals={0} />
+        <IngredientCard name="Sal" amount={ingredients.salt} unit="g" decimals={1} />
+        <IngredientCard name="Fermento" amount={ingredients.yeast} unit="g" decimals={2} />
         {config.useOil && (
           <div className="col-span-2 animate-in fade-in zoom-in-95 duration-300">
-            <IngredientCard name="Azeite" amount={ingredients.oil} unit="g" />
+            <IngredientCard name="Azeite" amount={ingredients.oil} unit="g" decimals={1} />
           </div>
         )}
       </section>
@@ -243,8 +243,9 @@ const App: React.FC = () => {
                   <div className="flex justify-between items-center pr-1">
                     <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Temp. Ambiente</span>
                     <button 
-                      onClick={requestLocation}
+                      onClick={detectLocationAndWeather}
                       disabled={isDetecting}
+                      title="Detectar por IP"
                       className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm border border-[#1d263b] transition-all ${isDetecting ? 'opacity-30 cursor-wait' : 'hover:bg-[#1d263b] hover:text-[#edece3]'}`}
                     >
                       {isDetecting ? '...' : 'Auto'}
@@ -294,7 +295,7 @@ const App: React.FC = () => {
                   {weather?.loading && (
                     <div className="flex items-center gap-2 mt-2 px-1 opacity-40 animate-pulse">
                       <div className="w-3 h-3 rounded-full border-2 border-[#1d263b] border-t-transparent animate-spin"></div>
-                      <span className="text-[9px] uppercase tracking-widest font-bold">Consultando IA...</span>
+                      <span className="text-[9px] uppercase tracking-widest font-bold">Localizando...</span>
                     </div>
                   )}
                 </div>
